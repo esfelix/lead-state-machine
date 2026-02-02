@@ -342,7 +342,9 @@ Lead achieves goal in first conversation. Later, new conversation starts for ups
 ## Problems solved
 
 
-### Goals 
+### Goals
+
+Goals become configurable per agent—any event can be the true endpoint, not just the 3 hardcoded types. This clears up reporting confusion and supports richer goal types in future:
 
 | Type | Example | Description |
 |------|---------|-------------|
