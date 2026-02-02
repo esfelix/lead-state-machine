@@ -225,6 +225,10 @@ The AI agent is decoupled from the state machine:
 
 The state machine defines *where the lead is*; the agent defines *how to behave*.
 
+---
+
+## What This Enables & Solves
+
 ### Operational Benefits
 
 - **Visibility** - diagram shows entire lifecycle; living documentation
@@ -234,95 +238,55 @@ The state machine defines *where the lead is*; the agent defines *how to behave*
 
 ### Example Flows
 
-#### Basic
-
 **Meeting booked as goal**
 
 * Agent goal is to book a sales call. 
-* Agent reaches out, lead engages, books meeting, goal achieved.
+* Flow: Agent reaches out, lead engages, books meeting, goal hit.
 
 <video src="media/meeting-booked-as-goal.mov" controls muted width="100%"></video>
 
-**Link click as goal**
-
-* Agent's goal is to get lead to click a link
-* Lead clicks link, conversation ends
-
-<video src="media/link-clicked-as-goal.mov" controls muted width="100%"></video>
-
-**Deal closed as goal**
-```
-idle → agent.message_sent → outreach → lead.message_sent → engaged
-→ meeting.booked → meeting_booked → meeting.attended → meeting_attended
-→ deal.closed → deal_closed → goal.hit
-```
-Full funnel: outreach → engagement → meeting → deal closed.
-
-#### Backward Transitions
-
-These flows are impossible with boolean flags - the key differentiator.
-
 **Sparky revival**
-```
-outreach → follow_up.sequence_completed → cold [sparky activates]
-→ lead.message_sent → engaged → meeting.booked → meeting_booked
-```
-Follow-ups exhaust, lead goes cold. Weeks later lead responds, books meeting.
+
+* Agent goal is to book a sales call
+* Flow: Follow-ups exhaust, lead goes cold. Months later lead responds, books meeting.
 
 **No-show rebooking**
-```
-meeting_booked → meeting.missed → meeting_missed
-→ lead.message_sent → engaged → meeting.booked → meeting_booked
-```
-Lead no-shows, re-engages, books again. With flags, `meeting_booked=True` would block this.
+
+* Agent goal is to attend a meeting
+* Flow: Lead no-shows, re-engages, books again, attends meeting so goal is hit
 
 **Opt-out then re-engagement**
-```
-engaged → lead.opted_out → opted_out → lead.message_sent → engaged
-```
-Lead opts out, later messages back. Conversation resumes.
 
-#### Follow-up Stopping & Reset
+* Agent goal is to attend a meeting
+* Flow: Lead opts out, later messages back. Conversation resumes.
 
 **Follow-up reset on re-engagement**
-```
-engaged → link.clicked [follow-ups stop] → engaged
-→ meeting.booked → meeting_booked → meeting.missed → meeting_missed
-→ lead.message_sent → engaged [follow-ups reset]
-```
-Entry into `engaged` resets follow-up eligibility. Previous stopping event is historical.
 
-This flow demonstrates how `followUpsStopped` works. The eligibility check:
+* Entry into `engaged` resets follow-up eligibility
+* This flow demonstrates how `followUpsStopped` context works to allow follow-ups to resume when a lead re-engages.
+
+Somewhere in our follow-ups sending code we would have a simple check (reading from the lead state and context) like:
 
 ```python
-def can_send_follow_up(state: str, context: dict) -> bool:
-    valid_state = state in ('engaged', 'outreach')
-    return valid_state and not context['follow_ups_stopped']
+# Logic for determining if a lead can receive follow-ups
+can_receive_follow_up = 
+    state in ('engaged', 'outreach') # state
+    and not follow_ups_stopped # context updated when we enter the engaged state
 ```
 
-Each time the lead enters `engaged`, the entry action runs `clearFollowUpStop`, resetting `followUpsStopped = false`. While in `engaged` or `outreach`, configured events can fire `follow_up.stopped`, setting `followUpsStopped = true`. If the lead later re-engages (e.g., after no-show), entering `engaged` resets eligibility again.
+This enables the following flow: lead books meeting → stops follow-ups → no-shows → re-engages → follow-ups resume
 
-This enables the no-show rebooking flow: lead books meeting → stops follow-ups → no-shows → re-engages → follow-ups restart automatically.
-
-#### Other Capabilities
 
 **CRM override**
-```
-outreach → meeting.booked → meeting_booked
-```
+
 Client updates CRM field directly. State machine respects CRM as source of truth.
 
 **Non-goal termination**
-```
-outreach → follow_up.sequence_completed → cold → conversation.stopped
-```
-Client takes over when lead goes cold. Not a goal-just a handoff.
+
+Client takes over when lead goes cold. Not a goal—just a handoff.
 
 **Human intervention to deal**
-```
-engaged → human.intervened → human_intervention
-→ meeting.booked → meeting_booked → deal.closed → deal_closed
-```
+
 Human takes over, closes deal via CRM. Events still logged.
 
 **Re-entry after goal (upsell)**
@@ -333,16 +297,13 @@ idle → ... → engaged → meeting.booked → meeting_booked → goal.hit
 [Conversation 2 - same lead, fresh state]
 idle → ... → engaged → deal.closed → deal_closed
 ```
-Lead achieves goal in first conversation. Later, new conversation starts for upsell. Fresh state, but event history from conversation 1 available for context.
+Lead converastion terminates in first conversation (fails to convert or goal is hit). Later, lead engages again. Fresh state, but event history and chat history from conversation 1 available as context for second converastion.
 
-
-
-## Problems solved
 
 
 ### Goals
 
-Any event can be a goal - `meeting.booked`, `deal.closed`, `link.clicked` - configured per agent rather than hardcoded. This solves the current confusion where "goal" conflates stopping conditions, success metrics, and reporting. It also supports richer goal types:
+Goals become configurable per agent-any event can be the true endpoint, not just the 3 hardcoded types. This clears up reporting confusion and supports richer goal types in future:
 
 | Type | Example | Description |
 |------|---------|-------------|
