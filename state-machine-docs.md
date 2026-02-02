@@ -237,14 +237,14 @@ The state machine defines *where the lead is*; the agent defines *how to behave*
 * Agent goal is to book a sales call. 
 * Agent reaches out, lead engages, books meeting, goal achieved.
 
-![Meeting booked as goal](media/meeting-booked-as-goal.mov)
+<video src="media/meeting-booked-as-goal.mov" controls width="100%"></video>
 
 **Link click as goal**
 
 * Agent's goal is to get lead to click a link
 * Lead clicks link, conversation ends
 
-![Link clicked as goal](media/link-clicked-as-goal.mov)
+<video src="media/link-clicked-as-goal.mov" controls width="100%"></video>
 
 **Deal closed as goal**
 ```
