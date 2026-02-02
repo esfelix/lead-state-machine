@@ -236,7 +236,7 @@ The state machine defines *where the lead is*; the agent defines *how to behave*
 - **Testability** - deterministic; test each state independently
 - **Reduced complexity** - invalid states structurally impossible; logic centralised
 
-### Example Flows
+### Example lead flows now supported (pre-existing and new)
 
 **Meeting booked as goal**
 
