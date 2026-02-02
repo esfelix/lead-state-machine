@@ -1,5 +1,10 @@
 # Agent Architecture Evolution
 
+* TOC
+{:toc}
+
+---
+
 ## Current Architecture
 
 The current architecture was lifted from Airtable, where we did the initial standardisation across clients. Building on existing goal definitions and boolean flags, it provided a consistent model that worked well for the core use case: send follow-ups until a goal is hit.
