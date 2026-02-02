@@ -1,5 +1,10 @@
 # Agent Architecture Evolution
 
+* TOC
+{:toc}
+
+---
+
 ## Current Architecture
 
 The current architecture was lifted from Airtable, where we did the initial standardisation across clients. Building on existing goal definitions and boolean flags, it provided a consistent model that worked well for the core use case: send follow-ups until a goal is hit.
@@ -136,7 +141,7 @@ A hierarchical state machine that separates:
 - **Events:** "what happened?" — immutable log, powers transitions and reporting
 - **Transitions:** triggered by events, can be bidirectional where needed
 
-[View interactive state machine in Stately](https://stately.ai/registry/editor/embed/592dca8e-d0f1-4f3e-b4ed-f59f4ce6beb5?machineId=49b577fa-54be-4e96-9e5b-47995120cd19&mode=Simulate)
+<iframe src="https://stately.ai/registry/editor/embed/592dca8e-d0f1-4f3e-b4ed-f59f4ce6beb5?machineId=49b577fa-54be-4e96-9e5b-47995120cd19&mode=Design" width="100%" height="500px" frameborder="0"></iframe>
 
 ### States vs Events
 
