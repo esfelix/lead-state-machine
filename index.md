@@ -18,7 +18,7 @@ The rest of this document assumes we will be moving all clients off Airtable, wh
 
 We track lead lifecycle with boolean flags: `initial_message_sent`, `user_engaged`, `goal_presented`, `goal_hit`, `meeting_booked`, `human_intervention`, `not_interested_opted_out`. These control business logic, sync to CRM and power reporting.
 
-Flags only flip one way: `False → True`. Once set, they stay set forever—partly because we need them for historical reporting.
+Flags only flip one way: `False → True`. Once set, they stay set forever-partly because we need them for historical reporting.
 
 **Goals** define success conditions. There are three goal types: URL clicked, third-party callback, and phrase match. Each follow-up policy configures which types should stop it. When a matching goal is hit, we set `goal_hit=True`.
 
@@ -32,9 +32,9 @@ Flags sync to client CRMs and power historical reporting, so they can't be reset
 
 | Scenario | Expected | Actual |
 |----------|----------|--------|
-| No-show, lead re-engages | Rebook meeting | Stuck — `meeting_booked=True` forever |
-| Lead goes cold, re-engages later | Restart follow-ups | Can't restart — flags are permanent |
-| Opts out, then messages back | Resume conversation | Stuck — `opted_out=True` forever |
+| No-show, lead re-engages | Rebook meeting | Stuck - `meeting_booked=True` forever |
+| Lead goes cold, re-engages later | Restart follow-ups | Can't restart - flags are permanent |
+| Opts out, then messages back | Resume conversation | Stuck - `opted_out=True` forever |
 
 ### Problem 2: Flags Are Overloaded
 
@@ -50,7 +50,7 @@ These conflict. A single boolean can't serve all three purposes.
 
 ### Problem 3: What Counts as a Goal?
 
-The 3 hardcoded goal types (link click, callback, phrase match) are often intermediate steps, not actual goals. `meeting_booked` isn't a goal type—it's a separate flag with its own stopping logic—yet for many clients, booking a meeting is the actual goal. As we extend the funnel, the real goal will shift for different clients (e.g. attending a meeting, closing a deal).
+The 3 hardcoded goal types (link click, callback, phrase match) are often intermediate steps, not actual goals. `meeting_booked` isn't a goal type-it's a separate flag with its own stopping logic-yet for many clients, booking a meeting is the actual goal. As we extend the funnel, the real goal will shift for different clients (e.g. attending a meeting, closing a deal).
 
 Both Airtable and our system have workarounds to stop follow-ups when particular events occur:
 - **Airtable**: "agent end goal" flag to distinguish stopping vs non-stopping goals
@@ -62,7 +62,7 @@ If "goal" was defined as the agent's true endpoint, hitting a goal would natural
 
 Additionally, because goals are the only configurable stopping mechanism, we sometimes configure matching phrases as goals that aren't related to the agent's actual goal.
 
-**This causes reporting confusion.** Many agents "hit their goal" (link clicked, phrase matched) without booking a meeting—which is often the real goal. Reports show high goal hit rates that don't reflect actual business outcomes.
+**This causes reporting confusion.** Many agents "hit their goal" (link clicked, phrase matched) without booking a meeting-which is often the real goal. Reports show high goal hit rates that don't reflect actual business outcomes.
 
 ### Problem 4: Hard to Reason About
 
@@ -106,24 +106,24 @@ The current architecture makes it problematic to implement all of the following:
   - Flags are permanent
 
 - **Rich reporting**
-  - Current reports on "goals hit" are confusing — a link click counts as goal hit, but booking a meeting is often the real goal
+  - Current reports on "goals hit" are confusing - a link click counts as goal hit, but booking a meeting is often the real goal
   - Reports show high goal hit rates that don't reflect actual business outcomes
   - Can't be fixed until we correctly define what a goal is
   - As we expand the system with more events, skills and states (no-show, meeting attended, deal closed), we need configurable reporting per agent
-  - Flags only record "ever happened" — no event ordering, counts, or journey analytics
+  - Flags only record "ever happened" - no event ordering, counts, or journey analytics
 
 - **ABI orchestration and APE API**
   - Need clean entities, consistent definitions, and rich data
   - Will orchestrate and expose agent skills, which clients need to selectively activate
   - Currently: flags are overloaded, goals are confusing, skills are entangled with hardcoded flag logic
-  - No modular boundary — can't activate a skill without understanding the whole system
+  - No modular boundary - can't activate a skill without understanding the whole system
   - ABI can only orchestrate what's well-defined; the API can only expose what's coherent; clients can only use what's modular
   - ABI reporting and analytics are only as good as the underlying data
   - The current foundation constrains everything built on top
 
 - **Prototyping**
   - Hard to experiment with new behaviours
-  - Each new skill touches flags, stopping logic, and goal configuration — no isolated boundary
+  - Each new skill touches flags, stopping logic, and goal configuration - no isolated boundary
   - Can't test one idea without understanding how it ripples through the entire system
 
 Some of these could be implemented either partially or with limited functionality while also increasing tech debt and complexity.
@@ -138,8 +138,8 @@ Overall the current trajectory feels unsustainable and eventually it will become
 
 A hierarchical state machine that separates:
 
-- **State:** "where is this lead right now?" — mutable, controls behaviour
-- **Events:** "what happened?" — immutable log, powers transitions and reporting
+- **State:** "where is this lead right now?" - mutable, controls behaviour
+- **Events:** "what happened?" - immutable log, powers transitions and reporting
 - **Transitions:** triggered by events, can be bidirectional where needed
 
 <iframe src="https://stately.ai/registry/editor/embed/592dca8e-d0f1-4f3e-b4ed-f59f4ce6beb5?machineId=49b577fa-54be-4e96-9e5b-47995120cd19&mode=Design" width="100%" height="500px" frameborder="0"></iframe>
@@ -154,7 +154,7 @@ A state represents a **mode of operation**. Three tests:
 | **Changes behaviour** | Does entering change which events are valid or how the system responds? |
 | **Finite** | Can you list all possible values? (not infinite like counts/timestamps) |
 
-**Example:** `link.clicked` is NOT a state — a lead can click a link while `engaged`, it doesn't change their mode of operation, and the same events remain valid afterward. It's an **event** that gets logged.
+**Example:** `link.clicked` is NOT a state - a lead can click a link while `engaged`, it doesn't change their mode of operation, and the same events remain valid afterward. It's an **event** that gets logged.
 
 ### Parent States
 
@@ -168,23 +168,23 @@ Examples:
 
 The state machine is deliberately minimal:
 
-- **Not all events handled** — only those causing transitions or side effects
-- **Not all self-transitions shown** — omitted for clarity when no side effects
-- **Minimal side effects** — only state and context mutations. Other concerns (CRM sync, notifications) handled by listeners.
+- **Not all events handled** - only those causing transitions or side effects
+- **Not all self-transitions shown** - omitted for clarity when no side effects
+- **Minimal side effects** - only state and context mutations. Other concerns (CRM sync, notifications) handled by listeners.
 
 One job: tracking where the lead is in their journey.
 
 ### Goals
 
-Goals are configurable per agent. Any event can be a goal—`meeting.booked`, `deal.closed`, `link.clicked`—configured per agent rather than hardcoded. When the configured goal fires, `goal.hit` triggers and the lead moves to terminal `goal_hit` state.
+Goals are configurable per agent. Any event can be a goal-`meeting.booked`, `deal.closed`, `link.clicked`-configured per agent rather than hardcoded. When the configured goal fires, `goal.hit` triggers and the lead moves to terminal `goal_hit` state.
 
 This solves the current confusion where "goal" conflates stopping conditions, success metrics, and reporting. It also opens the door to richer goal types: conditional goals (`deal.closed` where value ≥ £10k), composite goals (A AND B, A OR B), or time-bounded goals (`meeting.booked` within 7 days).
 
 ### Stopping Scheduled Messages
 
-The `follow_up.stopped` event stops follow-ups. Similar to goals, it fires when a configured condition is met — link clicked, third-party callback, phrase match, etc.
+The `follow_up.stopped` event stops follow-ups. Similar to goals, it fires when a configured condition is met - link clicked, third-party callback, phrase match, etc.
 
-This replaces `goal_completion_types`. Instead of "which goal types stop follow-ups", we configure "when should follow-ups stop" — decoupled from goal tracking.
+This replaces `goal_completion_types`. Instead of "which goal types stop follow-ups", we configure "when should follow-ups stop" - decoupled from goal tracking.
 
 ### Stopping the Conversation
 
@@ -197,7 +197,7 @@ This moves the lead to terminal `conversation_stopped` state. Unlike `goal.hit`,
 
 ### Context & Actions
 
-**Context** is minimal data alongside state — only values mutated by transitions, not general lead data:
+**Context** is minimal data alongside state - only values mutated by transitions, not general lead data:
 
 ```typescript
 context: {
@@ -214,25 +214,25 @@ Could expand to `checkInsStopped`, `noShowFollowUpsStopped` for independent cont
 | `clearFollowUpStop` | Entry to `engaged` | `followUpsStopped = false` |
 | `stopFollowUps` | `follow_up.stopped` event | `followUpsStopped = true` |
 
-Entry to `engaged` resets `followUpsStopped` to `false`, so each time a lead re-engages (after going cold, no show etc.) they start fresh — previous stopping events don't carry over.
+Entry to `engaged` resets `followUpsStopped` to `false`, so each time a lead re-engages (after going cold, no show etc.) they start fresh - previous stopping events don't carry over.
 
 ### Agent Independence
 
 The AI agent is decoupled from the state machine:
 
-- **Any framework** — LangGraph, LangChain, or any other
-- **Read-only** — agent reads state, emits events; doesn't mutate state directly
-- **State drives behaviour** — agent queries state and context to decide which skills are active, what actions are appropriate
-- **Independent evolution** — agent logic can change without touching the state machine
+- **Any framework** - LangGraph, LangChain, or any other
+- **Read-only** - agent reads state, emits events; doesn't mutate state directly
+- **State drives behaviour** - agent queries state and context to decide which skills are active, what actions are appropriate
+- **Independent evolution** - agent logic can change without touching the state machine
 
 The state machine defines *where the lead is*; the agent defines *how to behave*.
 
 ### Operational Benefits
 
-- **Visibility** — diagram shows entire lifecycle; living documentation
-- **Auditability** — event log provides audit trail; debug via state + recent events
-- **Testability** — deterministic; test each state independently
-- **Reduced complexity** — invalid states structurally impossible; logic centralised
+- **Visibility** - diagram shows entire lifecycle; living documentation
+- **Auditability** - event log provides audit trail; debug via state + recent events
+- **Testability** - deterministic; test each state independently
+- **Reduced complexity** - invalid states structurally impossible; logic centralised
 
 ### Example Flows
 
@@ -262,7 +262,7 @@ Full funnel: outreach → engagement → meeting → deal closed.
 
 #### Backward Transitions
 
-These flows are impossible with boolean flags — the key differentiator.
+These flows are impossible with boolean flags - the key differentiator.
 
 **Sparky revival**
 ```
@@ -318,7 +318,7 @@ Client updates CRM field directly. State machine respects CRM as source of truth
 ```
 outreach → follow_up.sequence_completed → cold → conversation.stopped
 ```
-Client takes over when lead goes cold. Not a goal—just a handoff.
+Client takes over when lead goes cold. Not a goal-just a handoff.
 
 **Human intervention to deal**
 ```
@@ -344,7 +344,7 @@ Lead achieves goal in first conversation. Later, new conversation starts for ups
 
 ### Goals
 
-Goals become configurable per agent—any event can be the true endpoint, not just the 3 hardcoded types. This clears up reporting confusion and supports richer goal types in future:
+Goals become configurable per agent-any event can be the true endpoint, not just the 3 hardcoded types. This clears up reporting confusion and supports richer goal types in future:
 
 | Type | Example | Description |
 |------|---------|-------------|
@@ -352,7 +352,7 @@ Goals become configurable per agent—any event can be the true endpoint, not ju
 | Conditional | `deal.closed` where value ≥ £10k | Event + property match |
 | Composite OR | `meeting.booked` OR `deal.closed` | First matching event |
 | Composite AND | `link.clicked` AND `meeting.booked` | Both events required |
-| No goal | — | Agent works lead indefinitely |
+| No goal | - | Agent works lead indefinitely |
 
 
 ### Reporting
@@ -415,7 +415,7 @@ Client updates CRM field directly. State machine respects CRM as source of truth
 
 **Non-goal termination**
 
-Client takes over when lead goes cold. Not a goal—just a handoff.
+Client takes over when lead goes cold. Not a goal-just a handoff.
 
 **Human intervention to deal**
 
