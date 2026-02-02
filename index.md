@@ -1,3 +1,4 @@
+
 # Agent Architecture Evolution
 
 * TOC
@@ -336,6 +337,22 @@ idle → ... → engaged → deal.closed → deal_closed
 ```
 Lead achieves goal in first conversation. Later, new conversation starts for upsell. Fresh state, but event history from conversation 1 available for context.
 
+
+
+## Problems solved
+
+
+### Goals 
+
+| Type | Example | Description |
+|------|---------|-------------|
+| Simple | `meeting.booked` | Goal fires when event occurs |
+| Conditional | `deal.closed` where value ≥ £10k | Event + property match |
+| Composite OR | `meeting.booked` OR `deal.closed` | First matching event |
+| Composite AND | `link.clicked` AND `meeting.booked` | Both events required |
+| No goal | — | Agent works lead indefinitely |
+
+
 ### Reporting
 
 With immutable event logs:
@@ -347,20 +364,77 @@ With immutable event logs:
 | Time from first contact to meeting? | Time between first `agent.message_sent` and `meeting.booked` |
 | Which leads re-engaged after going cold? | Leads with `cold` state followed by `lead.message_sent` |
 
-### Goal Configuration
+### Can handle current skills we need properly (sparky, no show, check in)
 
-| Type | Example | Description |
-|------|---------|-------------|
-| Simple | `meeting.booked` | Goal fires when event occurs |
-| Conditional | `deal.closed` where value ≥ £10k | Event + property match |
-| Composite OR | `meeting.booked` OR `deal.closed` | First matching event |
-| Composite AND | `link.clicked` AND `meeting.booked` | Both events required |
-| No goal | — | Agent works lead indefinitely |
+#### Basic
+
+**Meeting booked as goal**
+
+* Agent goal is to book a sales call. 
+* Flow: Agent reaches out, lead engages, books meeting, goal hit.
+
+<video src="media/meeting-booked-as-goal.mov" controls muted width="100%"></video>
+
+**Sparky revival**
+
+* Agent goal is to book a sales call
+* Flow: Follow-ups exhaust, lead goes cold. Months later lead responds, books meeting.
+
+**No-show rebooking**
+
+* Agent goal is to attend a meeting
+* Flow: Lead no-shows, re-engages, books again, attends meeting so goal is hit
+
+**Opt-out then re-engagement**
+
+* Agent goal is to attend a meeting
+* Flow: Lead opts out, later messages back. Conversation resumes.
+
+**Follow-up reset on re-engagement**
+
+* Entry into `engaged` resets follow-up eligibility
+* This flow demonstrates how `followUpsStopped` context works to allow follow-ups to resume when a lead re-engages.
+
+Somewhere in our follow-ups sending code we would have a simple check (reading from the lead state and context) like:
+
+```python
+# Logic for determining if a lead can receive follow-ups
+can_receive_follow_up = 
+    state in ('engaged', 'outreach') # state
+    and not follow_ups_stopped # context updated when we enter the engaged state
+```
+
+This enables the following flow: lead books meeting → stops follow-ups → no-shows → re-engages → follow-ups resume
 
 
-# Lead State Machine: Future Evolution
+**CRM override**
 
-Potential extensions to the state machine as the product evolves.
+Client updates CRM field directly. State machine respects CRM as source of truth.
+
+**Non-goal termination**
+
+Client takes over when lead goes cold. Not a goal—just a handoff.
+
+**Human intervention to deal**
+
+Human takes over, closes deal via CRM. Events still logged.
+
+**Re-entry after goal (upsell)**
+```
+[Conversation 1]
+idle → ... → engaged → meeting.booked → meeting_booked → goal.hit
+
+[Conversation 2 - same lead, fresh state]
+idle → ... → engaged → deal.closed → deal_closed
+```
+Lead converastion terminates in first conversation (fails to convert or goal is hit). Later, lead engages again. Fresh state, but event history and chat history from conversation 1 available as context for second converastion.
+
+
+### Protyping and future skills
+
+* Extremely configurable and pluggable 
+
+* If we can expose 
 
 ## Renewals
 ```
@@ -376,23 +450,13 @@ meeting_attended → payment.initiated → payment_pending
 ```
 Agent handles payment collection directly.
 
-## No-show to direct payment
-```
-meeting_booked → meeting.missed → meeting_missed → lead.message_sent → engaged
-→ payment.initiated → payment_pending → payment.completed → deal_closed
-```
-Lead no-shows, re-engages, pays directly without rebooking.
 
-## Multiple paths
-Agent closes deals directly OR books calls based on deal value. State machine supports both routes—agent uses judgement via prompting.
+### ABI and ape API
+ 
+ 
 
-## Goal Configuration Extensions
 
-Future possibilities:
-- Timeout: "meeting booked within 7 days"
-- Sequence: "link clicked, then meeting booked within 48 hours"
-- Count: "3 meetings booked"
 
-## Hypothetical Long-term Statechart
 
-[View in Stately](https://stately.ai/registry/editor/embed/d7d6256c-8408-4e52-92b4-6438fbacee97?mode=design&machineId=54228af4-1e11-4e2f-a463-3cb714ec552e)
+## Goal Configuration
+
