@@ -175,9 +175,9 @@ One job: tracking where the lead is in their journey.
 
 ### Goals
 
-Goals are configurable per agent. When the configured goal is detected, `goal.hit` fires and the lead moves to terminal `goal_hit` state.
+Goals are configurable per agent. Any event can be a goal—`meeting.booked`, `deal.closed`, `link.clicked`—configured per agent rather than hardcoded. When the configured goal fires, `goal.hit` triggers and the lead moves to terminal `goal_hit` state.
 
-This replaces the hardcoded 3 goal types (link click, callback, phrase match) with flexible configuration.
+This solves the current confusion where "goal" conflates stopping conditions, success metrics, and reporting. It also opens the door to richer goal types: conditional goals (`deal.closed` where value ≥ £10k), composite goals (A AND B, A OR B), or time-bounded goals (`meeting.booked` within 7 days).
 
 ### Stopping Scheduled Messages
 
